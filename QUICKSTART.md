@@ -1,4 +1,4 @@
-# 🚀 Quick Start Guide - LuckyDraw Verificator
+# 🚀 Quick Start Guide - AGIT ECM 2026 Doorprize 
 
 ## Step-by-Step Setup (5 Minutes)
 

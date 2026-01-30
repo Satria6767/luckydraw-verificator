@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# Quick Fix Script for LuckyDraw Verificator
+# Quick Fix Script for AGIT ECM 2026 Doorprize 
 # This script will help you get started quickly
 
-echo "🔧 LuckyDraw Verificator - Quick Fix Script"
+echo "🔧 AGIT ECM 2026 Doorprize - Quick Fix Script"
 echo "==========================================="
 echo ""
 

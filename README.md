@@ -1,4 +1,4 @@
-# 🎰 LuckyDraw Verificator System
+# 🎰 AGIT ECM 2026 Doorprize System
 
 A professional prize draw system with attendance verification built with Next.js 14, TypeScript, Tailwind CSS, and SQLite.
 

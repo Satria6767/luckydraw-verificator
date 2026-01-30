@@ -106,7 +106,7 @@ export default function Home() {
       });
 
       const data = await response.json();
-      
+
       if (data.success) {
         // Wait for animation to complete
         setTimeout(() => {
@@ -146,15 +146,15 @@ export default function Home() {
       });
 
       const data = await response.json();
-      
+
       if (data.success) {
         showMessage('success', data.message);
-        
+
         // Reset state
         setTentativeWinners([]);
         setShowResults(false);
         setIsRolling(false);
-        
+
         // Reload data
         await loadPrizes();
         await loadEligibleParticipants();
@@ -187,11 +187,11 @@ export default function Home() {
                 <Trophy className="w-8 h-8 text-white" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">LuckyDraw Verificator</h1>
+                <h1 className="text-3xl font-bold text-gray-900">AGIT ECM 2026 Doorprize</h1>
                 <p className="text-sm text-gray-500 mt-1">Professional Prize Draw System</p>
               </div>
             </div>
-            
+
             <Link
               href="/admin"
               className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg transition-colors"
@@ -215,7 +215,7 @@ export default function Home() {
               <Users className="w-12 h-12 text-purple-400" />
             </div>
           </div>
-          
+
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
             <div className="flex items-center justify-between">
               <div>
@@ -225,7 +225,7 @@ export default function Home() {
               <Sparkles className="w-12 h-12 text-green-400" />
             </div>
           </div>
-          
+
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
             <div className="flex items-center justify-between">
               <div>
@@ -246,11 +246,10 @@ export default function Home() {
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className={`mb-6 p-4 rounded-xl flex items-center space-x-3 ${
-                message.type === 'success' 
-                  ? 'bg-green-50 text-green-800 border border-green-200' 
+              className={`mb-6 p-4 rounded-xl flex items-center space-x-3 ${message.type === 'success'
+                  ? 'bg-green-50 text-green-800 border border-green-200'
                   : 'bg-red-50 text-red-800 border border-red-200'
-              }`}
+                }`}
             >
               {message.type === 'success' ? (
                 <CheckCircle className="w-5 h-5" />
@@ -268,7 +267,7 @@ export default function Home() {
             <Gift className="w-6 h-6 mr-2 text-purple-500" />
             Draw Configuration
           </h2>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -345,7 +344,7 @@ export default function Home() {
                     <Trophy className="w-6 h-6 mr-2 text-yellow-500" />
                     Tentative Winners ({tentativeWinners.length})
                   </h2>
-                  
+
                   <button
                     onClick={handleConfirmWinners}
                     disabled={isConfirming || tentativeWinners.length === 0}
@@ -383,7 +382,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="mt-12 pb-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-gray-500 text-sm">
-          <p>LuckyDraw Verificator System v1.0 • Built with Next.js & SQLite</p>
+          <p>AGIT ECM 2026 Doorprize System v1.0 • Built with Next.js & SQLite</p>
         </div>
       </footer>
     </div>

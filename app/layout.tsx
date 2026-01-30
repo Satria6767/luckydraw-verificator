@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'LuckyDraw Verificator',
+  title: 'AGIT ECM 2026 Doorprize',
   description: 'Professional prize draw system with attendance verification',
 };
 

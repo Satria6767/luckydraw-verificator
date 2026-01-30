@@ -1,4 +1,4 @@
-# 🎰 LuckyDraw Verificator - Project Summary
+# 🎰 AGIT ECM 2026 Doorprize - Project Summary
 
 ## 📦 What You Got
 

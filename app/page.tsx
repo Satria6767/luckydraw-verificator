@@ -133,7 +133,7 @@ export default function Home() {
 
     if (isEligible && !isAlreadyTentative) {
       // VALID WINNER
-      setTentativeWinners(prev => [...prev, landedParticipant]);
+      setTentativeWinners(prev => [landedParticipant, ...prev]);
       setIsRolling(false);
     } else {
       // NOT ELIGIBLE - Stop rolling state first so it can be re-triggered
@@ -203,7 +203,17 @@ export default function Home() {
   const selectedPrize = prizes.find((p) => p.id === selectedPrizeId);
 
   return (
-    <div className="min-h-screen bg-showman-black text-white selection:bg-showman-red selection:text-white">
+    <div className="relative min-h-screen flex flex-col text-white selection:bg-showman-red selection:text-white">
+      {/* Background Layer */}
+      <div className="fixed inset-0 -z-10 overflow-hidden bg-showman-black">
+        <img
+          src="/images/Background Doorprize-05.png"
+          alt="Background"
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-black/20" /> {/* Subtle overlay for contrast */}
+      </div>
+
       {/* Sidebar Overlay */}
       <AnimatePresence>
         {isSidebarOpen && (
@@ -317,7 +327,7 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 relative">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 relative flex-1 flex flex-col justify-center">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-px bg-gradient-to-r from-transparent via-showman-gold/20 to-transparent"></div>
         {/* Message Alert */}
         <AnimatePresence>
@@ -420,48 +430,66 @@ export default function Home() {
                 initial={{ scale: 0.9, opacity: 0, y: 20 }}
                 animate={{ scale: 1, opacity: 1, y: 0 }}
                 exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                className="relative w-full max-w-6xl max-h-full flex flex-col items-center space-y-8 overflow-y-auto no-scrollbar py-10"
+                className="relative w-full max-w-6xl max-h-full flex flex-col items-center overflow-y-auto no-scrollbar"
               >
-                {/* Overlay Header */}
-                <div className="text-center space-y-2">
-                  <h2 className="text-3xl sm:text-4xl font-black text-showman-gold uppercase tracking-[0.2em] drop-shadow-[0_0_20px_rgba(245,158,11,0.5)]">
-                    {isSequenceActive ? 'The Show is On!' : 'Witness the Winners'}
-                  </h2>
-                  <div className="h-1 w-32 bg-gradient-to-r from-transparent via-showman-red to-transparent mx-auto"></div>
-                  {selectedPrize && (
-                    <p className="text-showman-gold-cream/80 font-bold uppercase tracking-widest text-sm">
-                      Drawing for: <span className="text-showman-gold">{selectedPrize.prize_name}</span>
-                    </p>
-                  )}
-                </div>
+                {/* Sticky Header and Slot Machine Area */}
+                <div className="sticky top-0 z-20 w-full flex flex-col items-center pt-2 pb-6 space-y-4 bg-black/40 backdrop-blur-md border-b border-showman-gold/10">
+                  {/* Overlay Header */}
+                  <div className="text-center space-y-2">
+                    <h2 className="text-3xl sm:text-4xl font-black text-showman-gold uppercase tracking-[0.2em] drop-shadow-[0_0_20px_rgba(245,158,11,0.5)]">
+                      {isSequenceActive
+                        ? 'The Show is On!'
+                        : (tentativeWinners.length === quantity ? 'Congratulations to All Winners!' : 'Witness the Winners')}
+                    </h2>
+                    <div className="h-1 w-32 bg-gradient-to-r from-transparent via-showman-red to-transparent mx-auto"></div>
+                    {selectedPrize && (
+                      <p className="text-showman-gold-cream/80 font-bold uppercase tracking-widest text-sm">
+                        Drawing for: <span className="text-showman-gold">{selectedPrize.prize_name}</span>
+                      </p>
+                    )}
+                  </div>
 
-                {/* Slot Machine in Overlay */}
-                <div className="w-full max-w-3xl">
-                  <SlotMachine
-                    participants={allParticipants}
-                    isRolling={isRolling}
-                    onComplete={handleSlotMachineComplete}
-                  />
+                  {/* Slot Machine in Overlay - Hide when complete */}
+                  <AnimatePresence>
+                    {isSequenceActive && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0, scale: 0.95 }}
+                        animate={{ height: 'auto', opacity: 1, scale: 1 }}
+                        exit={{ height: 0, opacity: 0, scale: 0.95 }}
+                        className="w-full max-w-5xl overflow-hidden"
+                      >
+                        <SlotMachine
+                          participants={allParticipants}
+                          isRolling={isRolling}
+                          onComplete={handleSlotMachineComplete}
+                        />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
 
                 {/* Results Section in Overlay */}
-                <div className="w-full space-y-6">
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-showman-gold/20 pb-4">
-                    <h3 className="text-xl font-bold text-showman-gold flex items-center">
-                      <Trophy className="w-5 h-5 mr-2 text-showman-gold" />
-                      Tentative Winners ({tentativeWinners.length})
+                <div className="w-full space-y-6 px-4 sm:px-10 py-10">
+                  <div className="flex flex-col items-center justify-center gap-6 border-b border-showman-gold/20 pb-8">
+                    <h3 className="text-2xl font-black text-showman-gold flex items-center uppercase tracking-widest">
+                      <Trophy className="w-6 h-6 mr-3 text-showman-gold" />
+                      {tentativeWinners.length === quantity ? 'Final Winners List' : `Tentative Winners (${tentativeWinners.length}/${quantity})`}
                     </h3>
 
-                    <div className="flex items-center space-x-3">
-                      {!isSequenceActive && tentativeWinners.length > 0 && (
-                        <button
+                    <div className="flex flex-col items-center gap-4 w-full max-w-md">
+                      {!isSequenceActive && tentativeWinners.length === quantity && (
+                        <motion.button
+                          initial={{ scale: 0.5, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
                           onClick={handleConfirmWinners}
                           disabled={isConfirming}
-                          className="bg-showman-gold hover:bg-showman-gold-dark text-showman-black font-black py-3 px-8 rounded-xl shadow-[0_0_20px_rgba(245,158,11,0.3)] hover:shadow-[0_0_30px_rgba(245,158,11,0.5)] transform hover:scale-105 active:scale-95 transition-all flex items-center space-x-2 border-2 border-showman-gold-dark"
+                          className="w-full bg-gradient-to-r from-showman-gold via-showman-gold-light to-showman-gold hover:from-showman-gold-dark hover:to-showman-gold text-showman-black font-black py-4 px-10 rounded-2xl shadow-[0_0_40px_rgba(245,158,11,0.4)] hover:shadow-[0_0_60px_rgba(245,158,11,0.6)] transition-all flex items-center justify-center space-x-3 border-4 border-showman-gold/30 text-xl"
                         >
-                          <CheckCircle className="w-5 h-5" />
-                          <span>{isConfirming ? 'RECORDING...' : 'CONFIRM ALL'}</span>
-                        </button>
+                          <CheckCircle className="w-8 h-8" />
+                          <span>{isConfirming ? 'SAVING...' : 'COMPLETE & SAVE RESULTS'}</span>
+                        </motion.button>
                       )}
 
                       {!isSequenceActive && (
@@ -470,10 +498,9 @@ export default function Home() {
                             setShowResults(false);
                             setTentativeWinners([]);
                           }}
-                          className="p-3 bg-white/5 hover:bg-white/10 border-2 border-white/10 rounded-xl text-white/60 hover:text-white transition-all"
-                          title="Close Overlay"
+                          className="text-white/40 hover:text-white/80 transition-all text-sm font-bold uppercase tracking-widest underline underline-offset-4"
                         >
-                          <CloseIcon className="w-6 h-6" />
+                          Cancel and Close
                         </button>
                       )}
                     </div>
@@ -481,7 +508,7 @@ export default function Home() {
 
                   {tentativeWinners.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-10">
-                      <AnimatePresence>
+                      <AnimatePresence mode="popLayout">
                         {tentativeWinners.map((winner, index) => (
                           <WinnerCard
                             key={winner.id}

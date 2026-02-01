@@ -105,6 +105,20 @@ export default function AdminPage() {
     reader.readAsArrayBuffer(file);
   };
 
+  const handleExportWinners = () => {
+    const exportData = winners.map(winner => ({
+      "Nama": winner.name,
+      "NPK": winner.nim,
+      "Hadiah": winner.prize_name,
+      "Tanggal undian": new Date(winner.won_at).toLocaleString('id-ID')
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Winners");
+    XLSX.writeFile(wb, "Data_Pemenang_Luckydraw.xlsx");
+  };
+
   useEffect(() => {
     loadData();
   }, []);
@@ -319,6 +333,16 @@ export default function AdminPage() {
                   >
                     <Plus className="w-4 h-4" />
                     <span>Add Prize</span>
+                  </button>
+                )}
+                {activeTab === 'winners' && (
+                  <button
+                    onClick={handleExportWinners}
+                    disabled={winners.length === 0}
+                    className="flex items-center space-x-2 bg-showman-gold hover:bg-showman-gold-dark text-showman-black border border-showman-gold-dark font-medium py-2 px-4 rounded-lg transition-all disabled:opacity-50"
+                  >
+                    <FileDown className="w-4 h-4" />
+                    <span>Export Winners</span>
                   </button>
                 )}
               </div>

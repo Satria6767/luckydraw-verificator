@@ -19,10 +19,14 @@ interface WinnerCardProps {
 export default function WinnerCard({ participant, index, onRemove, disabled = false }: WinnerCardProps) {
   return (
     <motion.div
+      layout
       initial={{ scale: 0, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
       exit={{ scale: 0, opacity: 0 }}
-      transition={{ delay: index * 0.1 }}
+      transition={{
+        delay: index * 0.1,
+        layout: { type: 'spring', damping: 25, stiffness: 200 }
+      }}
       className="relative group"
     >
       <div className="bg-showman-black-light rounded-xl shadow-lg hover:shadow-2xl hover:shadow-showman-gold/20 transition-all duration-300 overflow-hidden border-2 border-showman-gold/50 hover:border-showman-gold">

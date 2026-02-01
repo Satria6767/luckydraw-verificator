@@ -2,7 +2,7 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const { randomUUID } = require('crypto');
 
-const dbPath = path.join(__dirname, '../luckydraw.db');
+const dbPath = path.join(__dirname, 'luckydraw.db');
 const db = new Database(dbPath);
 
 db.pragma('foreign_keys = ON');
@@ -49,7 +49,7 @@ const prizeCount = db.prepare('SELECT COUNT(*) as count FROM prizes').get();
 
 if (participantCount.count === 0) {
   console.log('📝 Inserting sample participants...');
-  
+
   const participants = [
     { name: 'Nur Muhammad', nim: '176781231' },
     { name: 'Siti Aisyah', nim: '176781232' },
@@ -79,7 +79,7 @@ if (participantCount.count === 0) {
   ];
 
   const insertParticipant = db.prepare('INSERT INTO participants (id, name, nim) VALUES (?, ?, ?)');
-  
+
   participants.forEach(p => {
     insertParticipant.run(randomUUID(), p.name, p.nim);
   });
@@ -89,20 +89,19 @@ if (participantCount.count === 0) {
 
 if (prizeCount.count === 0) {
   console.log('🎁 Inserting sample prizes...');
-  
+
   const prizes = [
-    { name: 'Motor Honda Beat', quota: 1 },
-    { name: 'Sepeda Polygon', quota: 3 },
-    { name: 'Smartphone Samsung', quota: 5 },
-    { name: 'Laptop ASUS', quota: 2 },
-    { name: 'Smart TV 43 inch', quota: 1 },
-    { name: 'Kulkas 2 Pintu', quota: 2 },
-    { name: 'Voucher Belanja 1 Juta', quota: 10 },
-    { name: 'Smartwatch', quota: 5 },
+    { name: 'Chopper/Blender', quota: 2 },
+    { name: 'Voucher Belanja', quota: 50 },
+    { name: 'TWS', quota: 15 },
+    { name: 'Sepeda Listrik', quota: 1 },
+    { name: 'Smart Watch', quota: 5 },
+    { name: 'Magic Com', quota: 1 },
+    { name: 'Setrika Uap', quota: 1 },
   ];
 
   const insertPrize = db.prepare('INSERT INTO prizes (id, prize_name, initial_quota, current_quota) VALUES (?, ?, ?, ?)');
-  
+
   prizes.forEach(p => {
     insertPrize.run(randomUUID(), p.name, p.quota, p.quota);
   });

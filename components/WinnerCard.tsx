@@ -13,9 +13,10 @@ interface WinnerCardProps {
   participant: Participant;
   index: number;
   onRemove: (id: string) => void;
+  disabled?: boolean;
 }
 
-export default function WinnerCard({ participant, index, onRemove }: WinnerCardProps) {
+export default function WinnerCard({ participant, index, onRemove, disabled = false }: WinnerCardProps) {
   return (
     <motion.div
       initial={{ scale: 0, opacity: 0 }}
@@ -24,29 +25,24 @@ export default function WinnerCard({ participant, index, onRemove }: WinnerCardP
       transition={{ delay: index * 0.1 }}
       className="relative group"
     >
-      <div className="bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border-2 border-gray-100 hover:border-purple-400">
-        <div className="bg-gradient-to-r from-purple-500 to-pink-500 h-2"></div>
-        
+      <div className="bg-showman-black-light rounded-xl shadow-lg hover:shadow-2xl hover:shadow-showman-gold/20 transition-all duration-300 overflow-hidden border-2 border-showman-gold/50 hover:border-showman-gold">
+        <div className="bg-gradient-to-r from-showman-red to-showman-red-dark h-2"></div>
+
         <div className="p-6">
           <div className="flex items-start justify-between">
-            <div className="flex items-center space-x-4 flex-1">
-              <div className="bg-gradient-to-br from-purple-400 to-pink-400 rounded-full p-3">
-                <User className="w-6 h-6 text-white" />
-              </div>
-              
-              <div className="flex-1">
-                <h3 className="text-xl font-bold text-gray-800 mb-1">
-                  {participant.name}
-                </h3>
-                <p className="text-sm text-gray-500 font-mono">
-                  NIM: {participant.nim}
-                </p>
-              </div>
+            <div className="flex-1 text-center">
+              <h3 className="text-xl font-bold text-showman-gold mb-1">
+                {participant.name}
+              </h3>
+              <p className="text-sm text-showman-gold-cream font-mono">
+                NPK: {participant.nim}
+              </p>
             </div>
 
             <button
               onClick={() => onRemove(participant.id)}
-              className="ml-4 p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all duration-200 group-hover:scale-110"
+              disabled={disabled}
+              className="ml-4 p-2 rounded-lg bg-showman-red/20 text-showman-red hover:bg-showman-red hover:text-white transition-all duration-200 group-hover:scale-110 border border-showman-red/50 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
               title="Remove from winners list"
             >
               <X className="w-5 h-5" />

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import SlotMachine from '@/components/SlotMachine';
 import WinnerCard from '@/components/WinnerCard';
-import { Gift, Sparkles, CheckCircle, Trophy, Users, AlertCircle, Settings } from 'lucide-react';
+import { Gift, Sparkles, CheckCircle, Trophy, Users, AlertCircle, Settings, Menu, X as CloseIcon, LayoutDashboard, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 
 interface Participant {
@@ -26,12 +26,15 @@ export default function Home() {
   const [selectedPrizeId, setSelectedPrizeId] = useState<string>('');
   const [quantity, setQuantity] = useState<number>(1);
   const [eligibleParticipants, setEligibleParticipants] = useState<Participant[]>([]);
+  const [allParticipants, setAllParticipants] = useState<Participant[]>([]);
   const [isRolling, setIsRolling] = useState(false);
+  const [isSequenceActive, setIsSequenceActive] = useState(false);
   const [tentativeWinners, setTentativeWinners] = useState<Participant[]>([]);
   const [showResults, setShowResults] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [stats, setStats] = useState({ totalParticipants: 0, eligibleParticipants: 0, totalPrizes: 0 });
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
     loadPrizes();
@@ -56,6 +59,10 @@ export default function Home() {
         eligibleParticipants: eligibleData.data?.length || 0,
         totalPrizes: prizesData.data?.length || 0
       });
+
+      if (participantsData.success) {
+        setAllParticipants(participantsData.data);
+      }
     } catch (error) {
       console.error('Error loading stats:', error);
     }
@@ -94,32 +101,51 @@ export default function Home() {
       return;
     }
 
+    if (quantity > stats.eligibleParticipants) {
+      showMessage('error', `Only ${stats.eligibleParticipants} eligible participants left`);
+      return;
+    }
+
     setMessage(null);
+    setTentativeWinners([]);
+    setShowResults(true);
+    setIsSequenceActive(true);
     setIsRolling(true);
-    setShowResults(false);
+  };
 
-    try {
-      const response = await fetch('/api/draw', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prizeId: selectedPrizeId, quantity }),
-      });
+  useEffect(() => {
+    if (!isRolling && isSequenceActive && tentativeWinners.length < quantity) {
+      const timer = setTimeout(() => {
+        setIsRolling(true);
+      }, 2000); // 2 second delay between winners
+      return () => clearTimeout(timer);
+    } else if (!isRolling && isSequenceActive && tentativeWinners.length === quantity) {
+      setIsSequenceActive(false);
+      showMessage('success', 'Draw complete! All winners revealed.');
+    }
+  }, [isRolling, isSequenceActive, tentativeWinners.length, quantity]);
 
-      const data = await response.json();
+  // Stabilize the complete callback to prevent unnecessary re-effects in SlotMachine
+  const handleSlotMachineComplete = (landedParticipant: Participant) => {
+    // GAMBLING LOGIC: Check if the person is eligible
+    const isAlreadyTentative = tentativeWinners.some(w => w.id === landedParticipant.id);
+    const isEligible = eligibleParticipants.some(p => p.id === landedParticipant.id);
 
-      if (data.success) {
-        // Wait for animation to complete
-        setTimeout(() => {
-          setTentativeWinners(data.data.winners);
-          setShowResults(true);
-        }, 3000);
-      } else {
-        setIsRolling(false);
-        showMessage('error', data.error);
-      }
-    } catch (error: any) {
+    if (isEligible && !isAlreadyTentative) {
+      // VALID WINNER
+      setTentativeWinners(prev => [...prev, landedParticipant]);
       setIsRolling(false);
-      showMessage('error', 'Failed to draw winners');
+    } else {
+      // NOT ELIGIBLE - Stop rolling state first so it can be re-triggered
+      setIsRolling(false);
+
+      const reason = isAlreadyTentative ? "Already drawn" : "Previous winner";
+      showMessage('error', `${landedParticipant.name} is ${reason}. Re-rolling...`);
+
+      // Short delay before auto-retry
+      setTimeout(() => {
+        setIsRolling(true);
+      }, 1500);
     }
   };
 
@@ -177,68 +203,122 @@ export default function Home() {
   const selectedPrize = prizes.find((p) => p.id === selectedPrizeId);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl p-3">
-                <Trophy className="w-8 h-8 text-white" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">AGIT ECM 2026 Doorprize</h1>
-                <p className="text-sm text-gray-500 mt-1">Professional Prize Draw System</p>
-              </div>
-            </div>
+    <div className="min-h-screen bg-showman-black text-white selection:bg-showman-red selection:text-white">
+      {/* Sidebar Overlay */}
+      <AnimatePresence>
+        {isSidebarOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsSidebarOpen(false)}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
+          />
+        )}
+      </AnimatePresence>
 
+      {/* Sidebar */}
+      <motion.aside
+        initial={{ x: '-100%' }}
+        animate={{ x: isSidebarOpen ? 0 : '-100%' }}
+        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+        className="fixed top-0 left-0 h-full w-80 bg-showman-black-light border-r-2 border-showman-gold/30 z-50 shadow-2xl flex flex-col"
+      >
+        <div className="p-6 border-b-2 border-showman-gold/20 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="bg-showman-red p-2 rounded-lg">
+              <Trophy className="w-5 h-5 text-showman-gold" />
+            </div>
+            <span className="font-bold text-showman-gold tracking-wider uppercase">Menu & Stats</span>
+          </div>
+          <button
+            onClick={() => setIsSidebarOpen(false)}
+            className="p-2 hover:bg-showman-red/20 rounded-full transition-colors text-showman-gold-cream"
+          >
+            <CloseIcon className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-6 space-y-8">
+          {/* Navigation */}
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-showman-gold-cream/40 uppercase tracking-widest mb-4">Navigation</p>
             <Link
               href="/admin"
-              className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg transition-colors"
+              className="flex items-center justify-between w-full bg-showman-red/10 hover:bg-showman-red/20 border-2 border-showman-red/30 p-4 rounded-xl transition-all group"
             >
-              <Settings className="w-4 h-4" />
-              <span>Admin Dashboard</span>
+              <div className="flex items-center space-x-3">
+                <LayoutDashboard className="w-5 h-5 text-showman-red" />
+                <span className="font-semibold text-white group-hover:text-showman-gold transition-colors">Admin Dashboard</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-showman-red group-hover:translate-x-1 transition-transform" />
             </Link>
+          </div>
+
+          {/* Stats Section */}
+          <div className="space-y-4">
+            <p className="text-xs font-semibold text-showman-gold-cream/40 uppercase tracking-widest mb-4">Event Stats</p>
+
+            <div className="bg-showman-black p-5 rounded-xl border border-showman-gold/10 group hover:border-showman-gold/30 transition-all">
+              <div className="flex items-center justify-between mb-2">
+                <Users className="w-5 h-5 text-showman-gold-light" />
+                <span className="text-2xl font-black text-white tracking-tighter">{stats.totalParticipants}</span>
+              </div>
+              <p className="text-xs text-showman-gold-cream/60 font-medium">Total Participants</p>
+            </div>
+
+            <div className="bg-showman-black p-5 rounded-xl border border-showman-gold/10 group hover:border-showman-gold/30 transition-all">
+              <div className="flex items-center justify-between mb-2">
+                <Sparkles className="w-5 h-5 text-showman-gold" />
+                <span className="text-2xl font-black text-showman-gold tracking-tighter">{stats.eligibleParticipants}</span>
+              </div>
+              <p className="text-xs text-showman-gold-cream/60 font-medium">Eligible to Win</p>
+            </div>
+
+            <div className="bg-showman-black p-5 rounded-xl border border-showman-gold/10 group hover:border-showman-gold/30 transition-all">
+              <div className="flex items-center justify-between mb-2">
+                <Gift className="w-5 h-5 text-showman-red" />
+                <span className="text-2xl font-black text-showman-red tracking-tighter">{stats.totalPrizes}</span>
+              </div>
+              <p className="text-xs text-showman-gold-cream/60 font-medium">Available Prizes</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-6 border-t-2 border-showman-gold/10 bg-black/20">
+          <p className="text-[10px] text-center text-showman-gold-cream/30 uppercase tracking-[0.2em]">AGIT ECM 2026 • v1.0</p>
+        </div>
+      </motion.aside>
+
+      {/* Header */}
+      <header className="bg-showman-black/80 backdrop-blur-md sticky top-0 z-30 shadow-2xl border-b-2 border-showman-gold/30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center relative">
+          {/* Sidebar Toggle */}
+          <button
+            onClick={() => setIsSidebarOpen(true)}
+            className="p-2.5 bg-showman-black-light hover:bg-showman-red/20 border-2 border-showman-gold/30 rounded-xl transition-all hover:scale-105 active:scale-95 group"
+          >
+            <Menu className="w-6 h-6 text-showman-gold group-hover:text-showman-gold-light transition-colors" />
+          </button>
+
+          {/* Centered Title */}
+          <div className="absolute left-1/2 -translate-x-1/2 text-center flex flex-col items-center">
+            <div className="flex items-center space-x-3 mb-0.5">
+              <div className="hidden sm:block h-[2px] w-8 bg-gradient-to-l from-showman-gold to-transparent"></div>
+              <h1 className="text-2xl sm:text-3xl font-black text-showman-gold tracking-[0.1em] uppercase drop-shadow-[0_0_15px_rgba(245,158,11,0.3)]">
+                AGIT ECM 2026 DOORPRIZE
+              </h1>
+              <div className="hidden sm:block h-[2px] w-8 bg-gradient-to-r from-showman-gold to-transparent"></div>
+            </div>
+            <p className="text-[10px] sm:text-xs text-showman-gold-cream font-bold tracking-[0.3em] uppercase opacity-80">
+              Xcelerate Growth, Power the Future
+            </p>
           </div>
         </div>
       </header>
 
-      {/* Stats Bar */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Total Participants</p>
-                <p className="text-3xl font-bold text-gray-900 mt-1">{stats.totalParticipants}</p>
-              </div>
-              <Users className="w-12 h-12 text-purple-400" />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Eligible to Win</p>
-                <p className="text-3xl font-bold text-green-600 mt-1">{stats.eligibleParticipants}</p>
-              </div>
-              <Sparkles className="w-12 h-12 text-green-400" />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Available Prizes</p>
-                <p className="text-3xl font-bold text-pink-600 mt-1">{stats.totalPrizes}</p>
-              </div>
-              <Gift className="w-12 h-12 text-pink-400" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 relative">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-px bg-gradient-to-r from-transparent via-showman-gold/20 to-transparent"></div>
         {/* Message Alert */}
         <AnimatePresence>
           {message && (
@@ -247,8 +327,8 @@ export default function Home() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               className={`mb-6 p-4 rounded-xl flex items-center space-x-3 ${message.type === 'success'
-                  ? 'bg-green-50 text-green-800 border border-green-200'
-                  : 'bg-red-50 text-red-800 border border-red-200'
+                ? 'bg-showman-gold text-showman-black border-2 border-showman-gold-dark'
+                : 'bg-showman-red text-white border-2 border-showman-red-dark'
                 }`}
             >
               {message.type === 'success' ? (
@@ -262,22 +342,22 @@ export default function Home() {
         </AnimatePresence>
 
         {/* Control Panel */}
-        <div className="bg-white rounded-2xl shadow-lg p-8 mb-8 border border-gray-200">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
-            <Gift className="w-6 h-6 mr-2 text-purple-500" />
+        <div className="bg-showman-black-light rounded-2xl shadow-2xl p-8 mb-8 border-2 border-showman-gold/40">
+          <h2 className="text-2xl font-bold text-showman-gold mb-6 flex items-center">
+            <Gift className="w-6 h-6 mr-2 text-showman-red" />
             Draw Configuration
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-showman-gold-cream mb-2">
                 Select Prize
               </label>
               <select
                 value={selectedPrizeId}
                 onChange={(e) => setSelectedPrizeId(e.target.value)}
-                disabled={isRolling || showResults}
-                className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+                disabled={isRolling || isSequenceActive || showResults}
+                className="w-full px-4 py-3 rounded-lg border-2 border-showman-gold/30 bg-showman-black-lighter text-white focus:border-showman-gold focus:ring-2 focus:ring-showman-gold/20 outline-none transition-all disabled:bg-showman-black-lighter/50 disabled:cursor-not-allowed"
               >
                 {prizes.length === 0 ? (
                   <option>No prizes available</option>
@@ -292,7 +372,7 @@ export default function Home() {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-showman-gold-cream mb-2">
                 Number of Winners
               </label>
               <input
@@ -301,90 +381,137 @@ export default function Home() {
                 max={selectedPrize?.current_quota || 1}
                 value={quantity}
                 onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
-                disabled={isRolling || showResults}
-                className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+                disabled={isRolling || isSequenceActive || showResults}
+                className="w-full px-4 py-3 rounded-lg border-2 border-showman-gold/30 bg-showman-black-lighter text-white focus:border-showman-gold focus:ring-2 focus:ring-showman-gold/20 outline-none transition-all disabled:bg-showman-black-lighter/50 disabled:cursor-not-allowed"
               />
             </div>
 
             <div className="flex items-end">
               <button
                 onClick={handleRoll}
-                disabled={isRolling || showResults || prizes.length === 0}
-                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center space-x-2"
+                disabled={isRolling || isSequenceActive || showResults || prizes.length === 0}
+                className="w-full bg-gradient-to-r from-showman-red to-showman-red-dark hover:from-showman-red-dark hover:to-showman-red text-showman-gold font-bold py-3 px-6 rounded-lg shadow-lg shadow-showman-red/50 hover:shadow-xl hover:shadow-showman-gold/50 transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center space-x-2 border-2 border-showman-gold/50"
               >
                 <Sparkles className="w-5 h-5" />
-                <span>{isRolling ? 'ROLLING...' : 'ROLL NOW'}</span>
+                <span>
+                  {isSequenceActive
+                    ? (isRolling
+                      ? `ROLLING (${tentativeWinners.length + 1}/${quantity})...`
+                      : 'NEXT ROLL IN...')
+                    : 'ROLL NOW'}
+                </span>
               </button>
             </div>
           </div>
         </div>
 
-        {/* Slot Machine Animation */}
-        {(isRolling || showResults) && eligibleParticipants.length > 0 && (
-          <div className="mb-8">
-            <SlotMachine
-              participants={eligibleParticipants}
-              isRolling={isRolling}
-              onComplete={() => setIsRolling(false)}
-            />
-          </div>
-        )}
-
-        {/* Results Section */}
+        {/* Drawing Overlay */}
         <AnimatePresence>
-          {showResults && tentativeWinners.length > 0 && (
+          {showResults && (
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6 md:p-10"
             >
-              <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-200">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold text-gray-800 flex items-center">
-                    <Trophy className="w-6 h-6 mr-2 text-yellow-500" />
-                    Tentative Winners ({tentativeWinners.length})
+              <div className="absolute inset-0 bg-black/95 backdrop-blur-2xl" />
+
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                className="relative w-full max-w-6xl max-h-full flex flex-col items-center space-y-8 overflow-y-auto no-scrollbar py-10"
+              >
+                {/* Overlay Header */}
+                <div className="text-center space-y-2">
+                  <h2 className="text-3xl sm:text-4xl font-black text-showman-gold uppercase tracking-[0.2em] drop-shadow-[0_0_20px_rgba(245,158,11,0.5)]">
+                    {isSequenceActive ? 'The Show is On!' : 'Witness the Winners'}
                   </h2>
-
-                  <button
-                    onClick={handleConfirmWinners}
-                    disabled={isConfirming || tentativeWinners.length === 0}
-                    className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center space-x-2"
-                  >
-                    <CheckCircle className="w-5 h-5" />
-                    <span>{isConfirming ? 'CONFIRMING...' : 'CONFIRM ALL WINNERS'}</span>
-                  </button>
+                  <div className="h-1 w-32 bg-gradient-to-r from-transparent via-showman-red to-transparent mx-auto"></div>
+                  {selectedPrize && (
+                    <p className="text-showman-gold-cream/80 font-bold uppercase tracking-widest text-sm">
+                      Drawing for: <span className="text-showman-gold">{selectedPrize.prize_name}</span>
+                    </p>
+                  )}
                 </div>
 
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-                  <p className="text-sm text-yellow-800">
-                    <strong>Verification Step:</strong> Call each name. If absent, click the ❌ button to remove them before confirming.
-                  </p>
+                {/* Slot Machine in Overlay */}
+                <div className="w-full max-w-3xl">
+                  <SlotMachine
+                    participants={allParticipants}
+                    isRolling={isRolling}
+                    onComplete={handleSlotMachineComplete}
+                  />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <AnimatePresence>
-                    {tentativeWinners.map((winner, index) => (
-                      <WinnerCard
-                        key={winner.id}
-                        participant={winner}
-                        index={index}
-                        onRemove={handleRemoveWinner}
-                      />
-                    ))}
-                  </AnimatePresence>
+                {/* Results Section in Overlay */}
+                <div className="w-full space-y-6">
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-showman-gold/20 pb-4">
+                    <h3 className="text-xl font-bold text-showman-gold flex items-center">
+                      <Trophy className="w-5 h-5 mr-2 text-showman-gold" />
+                      Tentative Winners ({tentativeWinners.length})
+                    </h3>
+
+                    <div className="flex items-center space-x-3">
+                      {!isSequenceActive && tentativeWinners.length > 0 && (
+                        <button
+                          onClick={handleConfirmWinners}
+                          disabled={isConfirming}
+                          className="bg-showman-gold hover:bg-showman-gold-dark text-showman-black font-black py-3 px-8 rounded-xl shadow-[0_0_20px_rgba(245,158,11,0.3)] hover:shadow-[0_0_30px_rgba(245,158,11,0.5)] transform hover:scale-105 active:scale-95 transition-all flex items-center space-x-2 border-2 border-showman-gold-dark"
+                        >
+                          <CheckCircle className="w-5 h-5" />
+                          <span>{isConfirming ? 'RECORDING...' : 'CONFIRM ALL'}</span>
+                        </button>
+                      )}
+
+                      {!isSequenceActive && (
+                        <button
+                          onClick={() => {
+                            setShowResults(false);
+                            setTentativeWinners([]);
+                          }}
+                          className="p-3 bg-white/5 hover:bg-white/10 border-2 border-white/10 rounded-xl text-white/60 hover:text-white transition-all"
+                          title="Close Overlay"
+                        >
+                          <CloseIcon className="w-6 h-6" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {tentativeWinners.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-10">
+                      <AnimatePresence>
+                        {tentativeWinners.map((winner, index) => (
+                          <WinnerCard
+                            key={winner.id}
+                            participant={winner}
+                            index={index}
+                            onRemove={handleRemoveWinner}
+                            disabled={isRolling || isSequenceActive}
+                          />
+                        ))}
+                      </AnimatePresence>
+                    </div>
+                  ) : (
+                    isSequenceActive && (
+                      <div className="py-20 text-center">
+                        <motion.div
+                          animate={{ opacity: [0.4, 1, 0.4] }}
+                          transition={{ duration: 2, repeat: Infinity }}
+                          className="text-showman-gold-cream/40 uppercase tracking-[0.3em] font-bold italic"
+                        >
+                          The curtain rises...
+                        </motion.div>
+                      </div>
+                    )
+                  )}
                 </div>
-              </div>
+              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
       </main>
-
-      {/* Footer */}
-      <footer className="mt-12 pb-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-gray-500 text-sm">
-          <p>AGIT ECM 2026 Doorprize System v1.0 • Built with Next.js & SQLite</p>
-        </div>
-      </footer>
     </div>
   );
 }

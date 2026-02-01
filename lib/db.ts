@@ -83,6 +83,14 @@ export const participantsDb = {
   deleteAll: () => {
     return db.prepare('DELETE FROM participants').run();
   },
+
+  bulkCreate: (participants: { id: string, name: string, nim: string }[]) => {
+    const insert = db.prepare('INSERT INTO participants (id, name, nim) VALUES (?, ?, ?)');
+    const insertMany = db.transaction((list) => {
+      for (const p of list) insert.run(p.id, p.name, p.nim);
+    });
+    return insertMany(participants);
+  },
 };
 
 // Prize operations

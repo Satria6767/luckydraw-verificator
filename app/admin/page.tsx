@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, Gift, Trophy, ArrowLeft, RefreshCw, Plus, Edit, Trash2, X, Save } from 'lucide-react';
+import { Users, Gift, Trophy, ArrowLeft, RefreshCw, Plus, Edit, Trash2, X, Save, FileUp, FileDown } from 'lucide-react';
 import Link from 'next/link';
+import * as XLSX from 'xlsx';
 
 interface Participant {
   id: string;
@@ -41,6 +42,68 @@ export default function AdminPage() {
   // Form State
   const [formData, setFormData] = useState<any>({});
   const [loading, setLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const downloadTemplate = () => {
+    const ws = XLSX.utils.json_to_sheet([
+      { "Nama Karyawan": "Contoh Nama", "NPK": "12345678" }
+    ]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Template");
+    XLSX.writeFile(wb, "Template_Import_Peserta.xlsx");
+  };
+
+  const handleExcelImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setLoading(true);
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const arrayBuffer = evt.target?.result as ArrayBuffer;
+        const data = new Uint8Array(arrayBuffer);
+        const wb = XLSX.read(data, { type: 'array' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const jsonData = XLSX.utils.sheet_to_json(ws) as any[];
+
+        const participantsToImport = jsonData
+          .map((row: any) => ({
+            name: (row['Nama Karyawan'] || row['name'] || row['Nama'])?.toString().trim(),
+            nim: (row['NPK'] || row['NIM'] || row['nim'])?.toString().trim()
+          }))
+          .filter((p: any) => p.name && p.nim);
+
+        if (participantsToImport.length === 0) {
+          alert('Data tidak ditemukan. Pastikan header Excel adalah "Nama Karyawan" dan "NPK".');
+          setLoading(false);
+          return;
+        }
+
+        const res = await fetch('/api/participants/bulk', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ participants: participantsToImport }),
+        });
+
+        const result = await res.json();
+        if (result.success) {
+          alert(`Berhasil mengimpor ${result.data.count} peserta!`);
+          loadData();
+        } else {
+          alert(result.error);
+        }
+      } catch (error) {
+        console.error('Import error:', error);
+        alert('Gagal membaca file Excel.');
+      } finally {
+        setLoading(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
 
   useEffect(() => {
     loadData();
@@ -134,24 +197,24 @@ export default function AdminPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
+    <div className="min-h-screen bg-gradient-to-br from-showman-black via-showman-black-light to-showman-black-lighter">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-10">
+      <header className="bg-showman-black shadow-lg border-b-2 border-showman-gold sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl p-3">
-                <Trophy className="w-8 h-8 text-white" />
+              <div className="bg-gradient-to-br from-showman-red to-showman-red-dark rounded-xl p-3 shadow-lg shadow-showman-gold/20">
+                <Trophy className="w-8 h-8 text-showman-gold" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-                <p className="text-sm text-gray-500 mt-1">Manage participants, prizes, and winners</p>
+                <h1 className="text-3xl font-bold text-showman-gold">Admin Dashboard</h1>
+                <p className="text-sm text-showman-gold-cream mt-1">Manage participants, prizes, and winners</p>
               </div>
             </div>
 
             <Link
               href="/"
-              className="flex items-center space-x-2 bg-white text-purple-600 border border-purple-200 hover:bg-purple-50 hover:border-purple-300 font-semibold py-2 px-4 rounded-lg transition-colors"
+              className="flex items-center space-x-2 bg-showman-gold hover:bg-showman-gold-dark text-showman-black border-2 border-showman-gold-dark font-semibold py-2 px-4 rounded-lg transition-all shadow-md hover:shadow-lg"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Back to Draw</span>
@@ -162,13 +225,13 @@ export default function AdminPage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Tabs */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-          <div className="flex border-b border-gray-200">
+        <div className="bg-showman-black-light rounded-2xl shadow-2xl border-2 border-showman-gold/40 overflow-hidden">
+          <div className="flex border-b-2 border-showman-gold/30">
             <button
               onClick={() => setActiveTab('participants')}
-              className={`flex-1 py-4 px-6 font-semibold transition-colors flex items-center justify-center space-x-2 ${activeTab === 'participants'
-                  ? 'bg-purple-50 text-purple-600 border-b-2 border-purple-600'
-                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              className={`flex-1 py-4 px-6 font-semibold transition-all flex items-center justify-center space-x-2 ${activeTab === 'participants'
+                ? 'bg-showman-gold text-showman-black border-b-4 border-showman-gold-dark'
+                : 'text-showman-gold-cream hover:text-showman-gold hover:bg-showman-black-lighter'
                 }`}
             >
               <Users className="w-5 h-5" />
@@ -177,9 +240,9 @@ export default function AdminPage() {
 
             <button
               onClick={() => setActiveTab('prizes')}
-              className={`flex-1 py-4 px-6 font-semibold transition-colors flex items-center justify-center space-x-2 ${activeTab === 'prizes'
-                  ? 'bg-purple-50 text-purple-600 border-b-2 border-purple-600'
-                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              className={`flex-1 py-4 px-6 font-semibold transition-all flex items-center justify-center space-x-2 ${activeTab === 'prizes'
+                ? 'bg-showman-gold text-showman-black border-b-4 border-showman-gold-dark'
+                : 'text-showman-gold-cream hover:text-showman-gold hover:bg-showman-black-lighter'
                 }`}
             >
               <Gift className="w-5 h-5" />
@@ -188,9 +251,9 @@ export default function AdminPage() {
 
             <button
               onClick={() => setActiveTab('winners')}
-              className={`flex-1 py-4 px-6 font-semibold transition-colors flex items-center justify-center space-x-2 ${activeTab === 'winners'
-                  ? 'bg-purple-50 text-purple-600 border-b-2 border-purple-600'
-                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              className={`flex-1 py-4 px-6 font-semibold transition-all flex items-center justify-center space-x-2 ${activeTab === 'winners'
+                ? 'bg-showman-gold text-showman-black border-b-4 border-showman-gold-dark'
+                : 'text-showman-gold-cream hover:text-showman-gold hover:bg-showman-black-lighter'
                 }`}
             >
               <Trophy className="w-5 h-5" />
@@ -200,7 +263,7 @@ export default function AdminPage() {
 
           <div className="p-6">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-gray-800">
+              <h2 className="text-xl font-bold text-showman-gold">
                 {activeTab === 'participants' && 'All Participants'}
                 {activeTab === 'prizes' && 'All Prizes'}
                 {activeTab === 'winners' && 'Winner History'}
@@ -209,26 +272,50 @@ export default function AdminPage() {
               <div className="flex space-x-3">
                 <button
                   onClick={loadData}
-                  className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg transition-colors"
+                  className="flex items-center space-x-2 bg-showman-black-lighter hover:bg-showman-black text-showman-gold-cream border border-showman-gold/30 font-medium py-2 px-4 rounded-lg transition-all"
                 >
                   <RefreshCw className="w-4 h-4" />
                   <span>Refresh</span>
                 </button>
 
                 {activeTab === 'participants' && (
-                  <button
-                    onClick={() => openModal('participant')}
-                    className="flex items-center space-x-2 bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Add Participant</span>
-                  </button>
+                  <>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      className="hidden"
+                      accept=".xlsx, .xls, .csv"
+                      onChange={handleExcelImport}
+                    />
+                    <button
+                      onClick={downloadTemplate}
+                      className="flex items-center space-x-2 bg-showman-black-lighter hover:bg-showman-black text-showman-gold-cream border border-showman-gold/30 font-medium py-2 px-4 rounded-lg transition-all"
+                    >
+                      <FileDown className="w-4 h-4" />
+                      <span>Template</span>
+                    </button>
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={loading}
+                      className="flex items-center space-x-2 bg-showman-black-lighter hover:bg-showman-black text-showman-gold border border-showman-gold/30 font-medium py-2 px-4 rounded-lg transition-all disabled:opacity-50"
+                    >
+                      <FileUp className="w-4 h-4" />
+                      <span>Import Excel</span>
+                    </button>
+                    <button
+                      onClick={() => openModal('participant')}
+                      className="flex items-center space-x-2 bg-showman-red hover:bg-showman-red-dark text-showman-gold font-medium py-2 px-4 rounded-lg transition-all shadow-md border border-showman-gold/50"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Add Participant</span>
+                    </button>
+                  </>
                 )}
 
                 {activeTab === 'prizes' && (
                   <button
                     onClick={() => openModal('prize')}
-                    className="flex items-center space-x-2 bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                    className="flex items-center space-x-2 bg-showman-red hover:bg-showman-red-dark text-showman-gold font-medium py-2 px-4 rounded-lg transition-all shadow-md border border-showman-gold/50"
                   >
                     <Plus className="w-4 h-4" />
                     <span>Add Prize</span>
@@ -241,35 +328,35 @@ export default function AdminPage() {
             {activeTab === 'participants' && (
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-50 border-b-2 border-gray-200">
+                  <thead className="bg-showman-black-lighter border-b-2 border-showman-gold/50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Name</th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">NIM</th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
-                      <th className="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-showman-gold uppercase tracking-wider">Name</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-showman-gold uppercase tracking-wider">NPK</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-showman-gold uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-3 text-right text-xs font-semibold text-showman-gold uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-200">
+                  <tbody className="divide-y divide-showman-gold/20">
                     {participants.map((participant) => (
                       <motion.tr
                         key={participant.id}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        className="hover:bg-gray-50 transition-colors"
+                        className="hover:bg-showman-black-lighter transition-colors"
                       >
-                        <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
+                        <td className="px-6 py-4 whitespace-nowrap font-medium text-white">
                           {participant.name}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-gray-600 font-mono text-sm">
+                        <td className="px-6 py-4 whitespace-nowrap text-showman-gold-cream font-mono text-sm">
                           {participant.nim}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           {participant.is_winner ? (
-                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-showman-gold/20 text-showman-gold border border-showman-gold/50">
                               Winner
                             </span>
                           ) : (
-                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-showman-red/20 text-showman-red border border-showman-red/50">
                               Eligible
                             </span>
                           )}
@@ -277,13 +364,13 @@ export default function AdminPage() {
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <button
                             onClick={() => openModal('participant', participant)}
-                            className="text-purple-600 hover:text-purple-900 mr-4"
+                            className="text-showman-gold hover:text-showman-gold-light mr-4"
                           >
                             <Edit className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleDelete('participant', participant.id)}
-                            className="text-red-600 hover:text-red-900"
+                            className="text-showman-red hover:text-showman-red-light"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -299,41 +386,41 @@ export default function AdminPage() {
             {activeTab === 'prizes' && (
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-50 border-b-2 border-gray-200">
+                  <thead className="bg-showman-black-lighter border-b-2 border-showman-gold/50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Prize Name</th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Initial</th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Current</th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
-                      <th className="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-showman-gold uppercase tracking-wider">Prize Name</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-showman-gold uppercase tracking-wider">Initial</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-showman-gold uppercase tracking-wider">Current</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-showman-gold uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-3 text-right text-xs font-semibold text-showman-gold uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-200">
+                  <tbody className="divide-y divide-showman-gold/20">
                     {prizes.map((prize) => (
                       <motion.tr
                         key={prize.id}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        className="hover:bg-gray-50 transition-colors"
+                        className="hover:bg-showman-black-lighter transition-colors"
                       >
-                        <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
+                        <td className="px-6 py-4 whitespace-nowrap font-medium text-white">
                           {prize.prize_name}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-gray-600">
+                        <td className="px-6 py-4 whitespace-nowrap text-showman-gold-cream">
                           {prize.initial_quota}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`font-bold ${prize.current_quota > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          <span className={`font-bold ${prize.current_quota > 0 ? 'text-showman-gold' : 'text-showman-red'}`}>
                             {prize.current_quota}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           {prize.current_quota > 0 ? (
-                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-showman-gold/20 text-showman-gold border border-showman-gold/50">
                               Available
                             </span>
                           ) : (
-                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-showman-red/20 text-showman-red border border-showman-red/50">
                               Out of Stock
                             </span>
                           )}
@@ -341,13 +428,13 @@ export default function AdminPage() {
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <button
                             onClick={() => openModal('prize', prize)}
-                            className="text-purple-600 hover:text-purple-900 mr-4"
+                            className="text-showman-gold hover:text-showman-gold-light mr-4"
                           >
                             <Edit className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleDelete('prize', prize.id)}
-                            className="text-red-600 hover:text-red-900"
+                            className="text-showman-red hover:text-showman-red-light"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -363,41 +450,41 @@ export default function AdminPage() {
             {activeTab === 'winners' && (
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-50 border-b-2 border-gray-200">
+                  <thead className="bg-showman-black-lighter border-b-2 border-showman-gold/50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Name</th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">NIM</th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Prize</th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Won At</th>
-                      <th className="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-showman-gold uppercase tracking-wider">Name</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-showman-gold uppercase tracking-wider">NPK</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-showman-gold uppercase tracking-wider">Prize</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-showman-gold uppercase tracking-wider">Won At</th>
+                      <th className="px-6 py-3 text-right text-xs font-semibold text-showman-gold uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-200">
+                  <tbody className="divide-y divide-showman-gold/20">
                     {winners.map((winner) => (
                       <motion.tr
                         key={winner.id}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        className="hover:bg-gray-50 transition-colors"
+                        className="hover:bg-showman-black-lighter transition-colors"
                       >
-                        <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
+                        <td className="px-6 py-4 whitespace-nowrap font-medium text-white">
                           {winner.name}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-gray-600 font-mono text-sm">
+                        <td className="px-6 py-4 whitespace-nowrap text-showman-gold-cream font-mono text-sm">
                           {winner.nim}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-800">
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-showman-gold/20 text-showman-gold border border-showman-gold/50">
                             {winner.prize_name}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-gray-600 text-sm">
+                        <td className="px-6 py-4 whitespace-nowrap text-showman-gold-cream text-sm">
                           {new Date(winner.won_at).toLocaleString('id-ID')}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <button
                             onClick={() => handleDelete('winner', winner.id)}
-                            className="text-red-600 hover:text-red-900"
+                            className="text-showman-red hover:text-showman-red-light"
                             title="Remove winner & restore quota"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -409,7 +496,7 @@ export default function AdminPage() {
                 </table>
 
                 {winners.length === 0 && (
-                  <div className="text-center py-12 text-gray-500">
+                  <div className="text-center py-12 text-showman-gold-cream">
                     No winners yet. Start drawing prizes!
                   </div>
                 )}
@@ -422,20 +509,20 @@ export default function AdminPage() {
       {/* Modal */}
       <AnimatePresence>
         {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden"
+              className="bg-showman-black-light rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden border-2 border-showman-gold/50"
             >
-              <div className="flex justify-between items-center p-6 border-b border-gray-100">
-                <h3 className="text-xl font-bold text-gray-900">
+              <div className="flex justify-between items-center p-6 border-b-2 border-showman-gold/30">
+                <h3 className="text-xl font-bold text-showman-gold">
                   {editingItem ? 'Edit' : 'Add'} {modalType === 'participant' ? 'Participant' : 'Prize'}
                 </h3>
                 <button
                   onClick={closeModal}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  className="text-showman-gold-cream hover:text-showman-gold transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -445,22 +532,22 @@ export default function AdminPage() {
                 {modalType === 'participant' && (
                   <>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                      <label className="block text-sm font-medium text-showman-gold-cream mb-1">Full Name</label>
                       <input
                         type="text"
                         required
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all"
+                        className="w-full px-4 py-2 border-2 border-showman-gold/30 bg-showman-black-lighter text-white rounded-lg focus:ring-2 focus:ring-showman-gold focus:border-showman-gold outline-none transition-all"
                         placeholder="e.g., John Doe"
                         value={formData.name || ''}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">NIM / ID</label>
+                      <label className="block text-sm font-medium text-showman-gold-cream mb-1">NPK / ID</label>
                       <input
                         type="text"
                         required
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all"
+                        className="w-full px-4 py-2 border-2 border-showman-gold/30 bg-showman-black-lighter text-white rounded-lg focus:ring-2 focus:ring-showman-gold focus:border-showman-gold outline-none transition-all"
                         placeholder="e.g., 12345678"
                         value={formData.nim || ''}
                         onChange={(e) => setFormData({ ...formData, nim: e.target.value })}
@@ -472,28 +559,28 @@ export default function AdminPage() {
                 {modalType === 'prize' && (
                   <>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Prize Name</label>
+                      <label className="block text-sm font-medium text-showman-gold-cream mb-1">Prize Name</label>
                       <input
                         type="text"
                         required
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all"
+                        className="w-full px-4 py-2 border-2 border-showman-gold/30 bg-showman-black-lighter text-white rounded-lg focus:ring-2 focus:ring-showman-gold focus:border-showman-gold outline-none transition-all"
                         placeholder="e.g., Bicycle"
                         value={formData.prizeName || ''}
                         onChange={(e) => setFormData({ ...formData, prizeName: e.target.value })}
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Initial Quota</label>
+                      <label className="block text-sm font-medium text-showman-gold-cream mb-1">Initial Quota</label>
                       <input
                         type="number"
                         min="1"
                         required
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all"
+                        className="w-full px-4 py-2 border-2 border-showman-gold/30 bg-showman-black-lighter text-white rounded-lg focus:ring-2 focus:ring-showman-gold focus:border-showman-gold outline-none transition-all"
                         value={formData.quota || ''}
                         onChange={(e) => setFormData({ ...formData, quota: parseInt(e.target.value) })}
                       />
                       {editingItem && (
-                        <p className="text-xs text-yellow-600 mt-1">
+                        <p className="text-xs text-showman-gold-cream mt-1">
                           Note: Changing initial quota will adjust current quota by the difference.
                         </p>
                       )}
@@ -505,14 +592,14 @@ export default function AdminPage() {
                   <button
                     type="button"
                     onClick={closeModal}
-                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
+                    className="flex-1 px-4 py-2 border-2 border-showman-gold/30 text-showman-gold-cream rounded-lg hover:bg-showman-black-lighter font-medium transition-all"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={loading}
-                    className="flex-1 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 font-bold shadow-md transition-all flex items-center justify-center space-x-2"
+                    className="flex-1 px-4 py-2 bg-gradient-to-r from-showman-red to-showman-red-dark text-showman-gold rounded-lg hover:from-showman-red-dark hover:to-showman-red font-bold shadow-lg border-2 border-showman-gold/50 transition-all flex items-center justify-center space-x-2"
                   >
                     {loading ? (
                       <RefreshCw className="w-4 h-4 animate-spin" />

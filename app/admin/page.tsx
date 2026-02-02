@@ -105,20 +105,6 @@ export default function AdminPage() {
     reader.readAsArrayBuffer(file);
   };
 
-  const handleExportWinners = () => {
-    const exportData = winners.map(winner => ({
-      "Nama": winner.name,
-      "NPK": winner.nim,
-      "Hadiah": winner.prize_name,
-      "Tanggal undian": new Date(winner.won_at).toLocaleString('id-ID')
-    }));
-
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Winners");
-    XLSX.writeFile(wb, "Data_Pemenang_Luckydraw.xlsx");
-  };
-
   useEffect(() => {
     loadData();
   }, []);

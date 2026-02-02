@@ -99,7 +99,7 @@ export default function SlotMachine({ participants, isRolling, onComplete }: Slo
   const currentParticipant = participants[currentIndex];
 
   return (
-    <div className="relative overflow-hidden bg-gradient-to-br from-showman-black via-showman-red-dark to-showman-black rounded-2xl p-4 shadow-2xl border-4 border-showman-gold w-full h-[180px] flex flex-col items-center justify-center">
+    <div className="relative overflow-hidden bg-gradient-to-br from-showman-black via-showman-red-dark to-showman-black rounded-2xl p-8 shadow-2xl border-4 border-showman-gold w-full h-[280px] flex flex-col items-center justify-center">
       <div className="absolute inset-0 bg-black/40"></div>
 
       <AnimatePresence mode="wait">
@@ -112,12 +112,12 @@ export default function SlotMachine({ participants, isRolling, onComplete }: Slo
           className="relative z-10 text-center w-full px-4"
         >
           <div
-            className="text-3xl sm:text-4xl md:text-5xl font-bold text-showman-gold mb-2 drop-shadow-lg truncate"
+            className="text-4xl sm:text-5xl md:text-6xl font-bold text-showman-gold mb-4 drop-shadow-lg truncate"
             style={{ fontFamily: "'Playfair Display', serif" }}
           >
             {currentParticipant?.name || '---'}
           </div>
-          <div className="text-lg sm:text-xl md:text-2xl text-showman-gold-cream font-mono">
+          <div className="text-xl sm:text-2xl md:text-3xl text-showman-gold-cream font-mono">
             {currentParticipant?.nim || '---'}
           </div>
         </motion.div>

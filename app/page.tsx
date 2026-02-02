@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import SlotMachine from '@/components/SlotMachine';
 import WinnerCard from '@/components/WinnerCard';
-import { Gift, Sparkles, CheckCircle, Trophy, Users, AlertCircle, Settings, Menu, X as CloseIcon, LayoutDashboard, ChevronRight } from 'lucide-react';
+import { Gift, Sparkles, CheckCircle, Trophy, Users, AlertCircle, Settings, Menu, X as CloseIcon, LayoutDashboard, ChevronRight, Package } from 'lucide-react';
 import Link from 'next/link';
 
 interface Participant {
@@ -75,7 +75,8 @@ export default function Home() {
       if (data.success) {
         setPrizes(data.data);
         if (data.data.length > 0 && !selectedPrizeId) {
-          setSelectedPrizeId(data.data[0].id);
+          // Cards start collapsed by default
+          // setSelectedPrizeId(data.data[0].id);
         }
       }
     } catch (error) {
@@ -93,6 +94,18 @@ export default function Home() {
     } catch (error) {
       console.error('Error loading participants:', error);
     }
+  };
+
+  const getPrizeImage = (prizeName: string) => {
+    const name = prizeName.toLowerCase();
+    if (name.includes('chopper') || name.includes('blender')) return '/images/chopper.png';
+    if (name.includes('ricecooker') || name.includes('rice cooker') || name.includes('magic com')) return '/images/ricecooker.png';
+    if (name.includes('sepeda listrik')) return '/images/sepeda listrik.png';
+    if (name.includes('setrika uap')) return '/images/setrika_uap.png';
+    if (name.includes('smartwatch') || name.includes('smart watch')) return '/images/smartwatch.png';
+    if (name.includes('tws')) return '/images/tws.png';
+    if (name.includes('voucher')) return '/images/voucher.png';
+    return null;
   };
 
   const handleRoll = async () => {
@@ -351,69 +364,161 @@ export default function Home() {
           )}
         </AnimatePresence>
 
-        {/* Control Panel */}
-        <div className="bg-showman-black-light rounded-2xl shadow-2xl p-8 mb-8 border-2 border-showman-gold/40">
-          <h2 className="text-2xl font-bold text-showman-gold mb-6 flex items-center">
-            <Gift className="w-6 h-6 mr-2 text-showman-red" />
-            Draw Configuration
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div>
-              <label className="block text-sm font-semibold text-showman-gold-cream mb-2">
-                Select Prize
-              </label>
-              <select
-                value={selectedPrizeId}
-                onChange={(e) => setSelectedPrizeId(e.target.value)}
-                disabled={isRolling || isSequenceActive || showResults}
-                className="w-full px-4 py-3 rounded-lg border-2 border-showman-gold/30 bg-showman-black-lighter text-white focus:border-showman-gold focus:ring-2 focus:ring-showman-gold/20 outline-none transition-all disabled:bg-showman-black-lighter/50 disabled:cursor-not-allowed"
-              >
-                {prizes.length === 0 ? (
-                  <option>No prizes available</option>
-                ) : (
-                  prizes.map((prize) => (
-                    <option key={prize.id} value={prize.id}>
-                      {prize.prize_name} (Stock: {prize.current_quota})
-                    </option>
-                  ))
-                )}
-              </select>
+        {/* Prize Selection Grid */}
+        {!showResults && (
+          <div className="space-y-8 mb-10">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-showman-gold flex items-center">
+                <Gift className="w-6 h-6 mr-3 text-showman-red" />
+                Select a Prize to Draw
+              </h2>
+              <div className="text-xs font-bold text-showman-gold-cream/40 uppercase tracking-widest bg-showman-gold/5 px-3 py-1 rounded-full border border-showman-gold/10">
+                {prizes.length} Categories Available
+              </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-semibold text-showman-gold-cream mb-2">
-                Number of Winners
-              </label>
-              <input
-                type="number"
-                min="1"
-                max={selectedPrize?.current_quota || 1}
-                value={quantity}
-                onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
-                disabled={isRolling || isSequenceActive || showResults}
-                className="w-full px-4 py-3 rounded-lg border-2 border-showman-gold/30 bg-showman-black-lighter text-white focus:border-showman-gold focus:ring-2 focus:ring-showman-gold/20 outline-none transition-all disabled:bg-showman-black-lighter/50 disabled:cursor-not-allowed"
-              />
-            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 items-start">
+              <AnimatePresence mode="popLayout">
+                {prizes.map((prize) => (
+                  <motion.div
+                    key={prize.id}
+                    layout
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    whileHover={selectedPrizeId !== prize.id ? { scale: 1.02, translateY: -5 } : {}}
+                    onClick={() => {
+                      if (!isRolling && !isSequenceActive) {
+                        if (selectedPrizeId === prize.id) {
+                          // Collapse if already selected
+                          setSelectedPrizeId('');
+                        } else {
+                          // Expand if not selected
+                          setSelectedPrizeId(prize.id);
+                          if (quantity > prize.current_quota) {
+                            setQuantity(1);
+                          }
+                        }
+                      }
+                    }}
+                    className={`relative cursor-pointer group rounded-3xl p-6 transition-all duration-500 border-2 overflow-hidden flex flex-col ${selectedPrizeId === prize.id
+                      ? 'bg-gradient-to-br from-showman-red/30 via-showman-black to-showman-black border-showman-gold ring-8 ring-showman-gold/10 z-20 shadow-[0_20px_50px_rgba(245,158,11,0.2)]'
+                      : 'bg-showman-black-light/80 backdrop-blur-sm border-showman-gold/20 hover:border-showman-gold/50 z-10'
+                      }`}
+                  >
+                    {/* Background decorative elements */}
+                    <div className={`absolute -right-6 -top-6 w-32 h-32 blur-[60px] rounded-full transition-opacity duration-700 ${selectedPrizeId === prize.id ? 'bg-showman-gold/30 opacity-100' : 'bg-showman-red/10 opacity-0 group-hover:opacity-100'
+                      }`} />
 
-            <div className="flex items-end">
-              <button
-                onClick={handleRoll}
-                disabled={isRolling || isSequenceActive || showResults || prizes.length === 0}
-                className="w-full bg-gradient-to-r from-showman-red to-showman-red-dark hover:from-showman-red-dark hover:to-showman-red text-showman-gold font-bold py-3 px-6 rounded-lg shadow-lg shadow-showman-red/50 hover:shadow-xl hover:shadow-showman-gold/50 transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center space-x-2 border-2 border-showman-gold/50"
-              >
-                <Sparkles className="w-5 h-5" />
-                <span>
-                  {isSequenceActive
-                    ? (isRolling
-                      ? `ROLLING (${tentativeWinners.length + 1}/${quantity})...`
-                      : 'NEXT ROLL IN...')
-                    : 'ROLL NOW'}
-                </span>
-              </button>
+                    <div className="relative z-10 w-full flex flex-col items-center">
+                      <div className="w-full flex justify-between items-start mb-4">
+                        <div className="flex flex-col items-start gap-1">
+                          <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border-2 transition-all duration-500 ${prize.current_quota > 0
+                            ? (selectedPrizeId === prize.id ? 'border-showman-gold text-showman-gold bg-showman-gold/10' : 'border-showman-gold/30 text-showman-gold-cream/60')
+                            : 'border-showman-red/50 text-showman-red bg-showman-red/5'
+                            }`}>
+                            {prize.current_quota > 0 ? `Stock: ${prize.current_quota}` : 'Out of Stock'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Prize Image Container */}
+                      <div className={`relative w-full aspect-square mb-6 flex items-center justify-center transition-all duration-700 ${selectedPrizeId === prize.id ? 'scale-110 rotate-1' : 'group-hover:scale-105'
+                        }`}>
+                        {getPrizeImage(prize.prize_name) ? (
+                          <motion.img
+                            src={getPrizeImage(prize.prize_name)!}
+                            alt={prize.prize_name}
+                            className="w-full h-full object-contain filter drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]"
+                          />
+                        ) : (
+                          <div className={`p-6 rounded-3xl transition-all duration-500 ${selectedPrizeId === prize.id
+                            ? 'bg-showman-gold text-showman-black scale-110 shadow-[0_0_20px_rgba(245,158,11,0.5)]'
+                            : 'bg-showman-gold/10 text-showman-gold group-hover:bg-showman-gold/20'
+                            }`}>
+                            <Package className="w-12 h-12" />
+                          </div>
+                        )}
+
+                        {/* Glow effect for image */}
+                        <div className={`absolute inset-0 bg-showman-gold/20 blur-3xl rounded-full transition-opacity duration-700 ${selectedPrizeId === prize.id ? 'opacity-100' : 'opacity-0'
+                          }`} />
+                      </div>
+
+                      <div className="w-full text-center">
+                        <h3 className={`text-xl font-black leading-tight mb-2 transition-all duration-500 ${selectedPrizeId === prize.id ? 'text-white scale-110' : 'text-showman-gold-cream group-hover:text-white'
+                          }`}>
+                          {prize.prize_name}
+                        </h3>
+                        <div className="h-1 w-12 bg-gradient-to-r from-transparent via-showman-red to-transparent rounded-full mx-auto mb-2"></div>
+                      </div>
+                    </div>
+
+                    {/* Inline Controls - Only visible when selected */}
+                    <AnimatePresence>
+                      {selectedPrizeId === prize.id && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                          animate={{ opacity: 1, height: 'auto', marginTop: 20 }}
+                          exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                          className="relative z-10 w-full space-y-5"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className="h-px w-full bg-gradient-to-r from-showman-gold/30 via-showman-gold/10 to-transparent" />
+
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <label className="text-[10px] font-black text-showman-gold-cream/60 uppercase tracking-[0.2em]">
+                                Number of Winners
+                              </label>
+                              <button
+                                onClick={() => setSelectedPrizeId('')}
+                                className="text-showman-red/60 hover:text-showman-red p-1 transition-colors"
+                              >
+                                <CloseIcon className="w-4 h-4" />
+                              </button>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="number"
+                                min="1"
+                                max={prize.current_quota}
+                                value={quantity}
+                                onChange={(e) => setQuantity(Math.min(prize.current_quota, Math.max(1, parseInt(e.target.value) || 1)))}
+                                disabled={isRolling || isSequenceActive}
+                                className="w-20 px-3 py-3 rounded-xl border-2 border-showman-gold/40 bg-showman-black text-center text-xl font-black text-white focus:border-showman-gold focus:ring-4 focus:ring-showman-gold/10 outline-none transition-all"
+                              />
+                              <div className="flex-1 flex flex-col">
+                                <span className="text-white font-bold text-sm">Target</span>
+                                <span className="text-showman-gold-cream/40 text-[10px] uppercase font-bold tracking-widest">Max: {prize.current_quota}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={handleRoll}
+                            disabled={isRolling || isSequenceActive || prize.current_quota < 1}
+                            className="w-full bg-gradient-to-r from-showman-red to-showman-red-dark hover:from-showman-red-dark hover:to-showman-red text-showman-gold font-black py-4 px-4 rounded-2xl shadow-lg border-2 border-white/10 hover:border-showman-gold/50 transition-all duration-300 flex items-center justify-center space-x-2 group/btn active:scale-95"
+                          >
+                            <Sparkles className="w-5 h-5 group-hover/btn:animate-pulse" />
+                            <span className="tracking-widest uppercase text-xs">Roll Now</span>
+                          </button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    {!selectedPrizeId && (
+                      <div className="mt-auto pt-4 flex items-center text-showman-gold-cream/30 group-hover:text-showman-gold/60 text-[10px] font-black uppercase tracking-[0.2em] transition-colors">
+                        Click to Configure <ChevronRight className="w-3 h-3 ml-1 group-hover:translate-x-1 transition-transform" />
+                      </div>
+                    )}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Drawing Overlay */}
         <AnimatePresence>

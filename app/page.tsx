@@ -377,7 +377,7 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 items-start">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 items-stretch">
               <AnimatePresence mode="popLayout">
                 {prizes.map((prize) => (
                   <motion.div
@@ -429,7 +429,7 @@ export default function Home() {
                           <motion.img
                             src={getPrizeImage(prize.prize_name)!}
                             alt={prize.prize_name}
-                            className="w-full h-full object-contain filter drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]"
+                            className="w-full h-full object-contain p-6 filter drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]"
                           />
                         ) : (
                           <div className={`p-6 rounded-3xl transition-all duration-500 ${selectedPrizeId === prize.id
